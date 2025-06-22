@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Location Form</title>
+  <style>
+    body { font-family: Arial; padding: 20px; }
+    select { margin-bottom: 10px; width: 300px; padding: 5px; }
+    button { padding: 10px 20px; }
+  </style>
+</head>
+<body>
+
+  <h2>Select Your Location</h2>
+  <form id="locationForm">
+    <label for="country">Country:</label><br>
+    <select id="country" required>
+      <option value="">--Select Country--</option>
+    </select><br>
+
+    <label for="state">State/Province:</label><br>
+    <select id="state" required>
+      <option value="">--Select State--</option>
+    </select><br>
+
+    <label for="city">City:</label><br>
+    <select id="city" required>
+      <option value="">--Select City--</option>
+    </select><br><br>
+
+    <button type="submit">Submit</button>
+  </form>
+
+  <script>
+    const countrySelect = document.getElementById("country");
+    const stateSelect = document.getElementById("state");
+    const citySelect = document.getElementById("city");
+
+    // Load countries
+    fetch("https://countriesnow.space/api/v0.1/countries/positions")
+      .then(res => res.json())
+      .then(data => {
+        data.data.forEach(country => {
+          const opt = document.createElement("option");
+          opt.value = country.name;
+          opt.textContent = country.name;
+          countrySelect.appendChild(opt);
+        });
+      });
+
+    // When country changes → get states
+    countrySelect.addEventListener("change", () => {
+      const country = countrySelect.value;
+      stateSelect.innerHTML = '<option>Loading...</option>';
+      citySelect.innerHTML = '<option>--Select City--</option>';
+
+      fetch("https://countriesnow.space/api/v0.1/countries/states", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ country })
+      })
+      .then(res => res.json())
+      .then(data => {
+        stateSelect.innerHTML = '<option value="">--Select State--</option>';
+        data.data.states.forEach(state => {
+          const opt = document.createElement("option");
+          opt.value = state.name;
+          opt.textContent = state.name;
+          stateSelect.appendChild(opt);
+        });
+      });
+    });
+
+    // When state changes → get cities
+    stateSelect.addEventListener("change", () => {
+      const country = countrySelect.value;
+      const state = stateSelect.value;
+      citySelect.innerHTML = '<option>Loading...</option>';
+
+      fetch("https://countriesnow.space/api/v0.1/countries/state/cities", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ country, state })
+      })
+      .then(res => res.json())
+      .then(data => {
+        citySelect.innerHTML = '<option value="">--Select City--</option>';
+        data.data.forEach(city => {
+          const opt = document.createElement("option");
+          opt.value = city;
+          opt.textContent = city;
+          citySelect.appendChild(opt);
+        });
+      });
+    });
+
+    // Handle form submission
+    document.getElementById("locationForm").addEventListener("submit", e => {
+      e.preventDefault();
+      const country = countrySelect.value;
+      const state = stateSelect.value;
+      const city = citySelect.value;
+
+      alert(`Submitted:\nCountry: ${country}\nState: ${state}\nCity: ${city}`);
+      // You can send this to Google Sheets, Sheety, or backend here
+    });
+  </script>
+
+</body>
+</html>
