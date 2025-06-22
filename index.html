@@ -39,7 +39,7 @@
     const stateSelect = document.getElementById("state");
     const citySelect = document.getElementById("city");
 
-    // Load countries on page load
+    // Load countries
     fetch("https://countriesnow.space/api/v0.1/countries/positions")
       .then(res => res.json())
       .then(data => {
@@ -54,7 +54,7 @@
       })
       .catch(err => alert("Failed to load countries: " + err.message));
 
-    // On country change, load states
+    // Load states
     countrySelect.addEventListener("change", () => {
       const country = countrySelect.value;
       stateSelect.innerHTML = '<option value="">Loading states...</option>';
@@ -95,7 +95,7 @@
         });
     });
 
-    // On state change, load cities
+    // Load cities
     stateSelect.addEventListener("change", () => {
       const country = countrySelect.value;
       const state = stateSelect.value;
@@ -135,22 +135,26 @@
         });
     });
 
-    // Handle form submit
+    // Submit form to Google Apps Script via CORS proxy
     document.getElementById("locationForm").addEventListener("submit", async (e) => {
       e.preventDefault();
       const country = countrySelect.value;
       const state = stateSelect.value;
       const city = citySelect.value;
 
-      // Replace this with your Apps Script Web App URL
+      // Your Google Apps Script Web App URL
       const scriptURL = "https://script.google.com/macros/s/AKfycbw1Mm6sEtUhdjF8-lGLb9BpMMf-1zY9igGxofoIMLQHmY2wyeTx5VI1bbiOwdaisRDt/exec";
 
+      // Wrap with CORS proxy
+      const corsProxyURL = "https://corsproxy.io/?" + encodeURIComponent(scriptURL);
+
       try {
-        const response = await fetch(scriptURL, {
+        const response = await fetch(corsProxyURL, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ country, state, city })
         });
+
         const result = await response.json();
 
         if (result.result === "success") {
