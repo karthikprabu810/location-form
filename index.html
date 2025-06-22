@@ -1,32 +1,35 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Location Form</title>
+  <meta charset="UTF-8" />
+  <title>Location Form with Google Sheets</title>
   <style>
-    body { font-family: Arial; padding: 20px; }
-    select { margin-bottom: 10px; width: 300px; padding: 5px; }
-    button { padding: 10px 20px; }
+    body { font-family: Arial, sans-serif; padding: 20px; max-width: 400px; margin: auto; }
+    label { font-weight: bold; }
+    select, button { width: 100%; padding: 8px; margin: 10px 0; font-size: 16px; }
+    button { cursor: pointer; background-color: #007bff; color: white; border: none; }
+    button:hover { background-color: #0056b3; }
   </style>
 </head>
 <body>
 
   <h2>Select Your Location</h2>
+
   <form id="locationForm">
-    <label for="country">Country:</label><br>
+    <label for="country">Country:</label><br />
     <select id="country" required>
       <option value="">--Select Country--</option>
-    </select><br>
+    </select>
 
-    <label for="state">State/Province:</label><br>
-    <select id="state" required>
+    <label for="state">State/Province:</label><br />
+    <select id="state" required disabled>
       <option value="">--Select State--</option>
-    </select><br>
+    </select>
 
-    <label for="city">City:</label><br>
-    <select id="city" required>
+    <label for="city">City:</label><br />
+    <select id="city" required disabled>
       <option value="">--Select City--</option>
-    </select><br><br>
+    </select>
 
     <button type="submit">Submit</button>
   </form>
@@ -36,73 +39,133 @@
     const stateSelect = document.getElementById("state");
     const citySelect = document.getElementById("city");
 
-    // Load countries
+    // Load countries on page load
     fetch("https://countriesnow.space/api/v0.1/countries/positions")
       .then(res => res.json())
       .then(data => {
-        data.data.forEach(country => {
-          const opt = document.createElement("option");
-          opt.value = country.name;
-          opt.textContent = country.name;
-          countrySelect.appendChild(opt);
-        });
-      });
+        if (data.error === false && data.data.length) {
+          data.data.forEach(country => {
+            const option = document.createElement("option");
+            option.value = country.name;
+            option.textContent = country.name;
+            countrySelect.appendChild(option);
+          });
+        }
+      })
+      .catch(err => alert("Failed to load countries: " + err.message));
 
-    // When country changes → get states
+    // On country change, load states
     countrySelect.addEventListener("change", () => {
       const country = countrySelect.value;
-      stateSelect.innerHTML = '<option>Loading...</option>';
-      citySelect.innerHTML = '<option>--Select City--</option>';
+      stateSelect.innerHTML = '<option value="">Loading states...</option>';
+      stateSelect.disabled = true;
+      citySelect.innerHTML = '<option value="">--Select City--</option>';
+      citySelect.disabled = true;
+
+      if (!country) {
+        stateSelect.innerHTML = '<option value="">--Select State--</option>';
+        stateSelect.disabled = true;
+        return;
+      }
 
       fetch("https://countriesnow.space/api/v0.1/countries/states", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ country })
       })
-      .then(res => res.json())
-      .then(data => {
-        stateSelect.innerHTML = '<option value="">--Select State--</option>';
-        data.data.states.forEach(state => {
-          const opt = document.createElement("option");
-          opt.value = state.name;
-          opt.textContent = state.name;
-          stateSelect.appendChild(opt);
+        .then(res => res.json())
+        .then(data => {
+          if (data.error === false && data.data.states.length) {
+            stateSelect.innerHTML = '<option value="">--Select State--</option>';
+            data.data.states.forEach(state => {
+              const option = document.createElement("option");
+              option.value = state.name;
+              option.textContent = state.name;
+              stateSelect.appendChild(option);
+            });
+            stateSelect.disabled = false;
+          } else {
+            stateSelect.innerHTML = '<option value="">No states found</option>';
+            stateSelect.disabled = true;
+          }
+        })
+        .catch(() => {
+          stateSelect.innerHTML = '<option value="">Error loading states</option>';
+          stateSelect.disabled = true;
         });
-      });
     });
 
-    // When state changes → get cities
+    // On state change, load cities
     stateSelect.addEventListener("change", () => {
       const country = countrySelect.value;
       const state = stateSelect.value;
-      citySelect.innerHTML = '<option>Loading...</option>';
+      citySelect.innerHTML = '<option value="">Loading cities...</option>';
+      citySelect.disabled = true;
+
+      if (!state) {
+        citySelect.innerHTML = '<option value="">--Select City--</option>';
+        citySelect.disabled = true;
+        return;
+      }
 
       fetch("https://countriesnow.space/api/v0.1/countries/state/cities", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ country, state })
       })
-      .then(res => res.json())
-      .then(data => {
-        citySelect.innerHTML = '<option value="">--Select City--</option>';
-        data.data.forEach(city => {
-          const opt = document.createElement("option");
-          opt.value = city;
-          opt.textContent = city;
-          citySelect.appendChild(opt);
+        .then(res => res.json())
+        .then(data => {
+          if (data.error === false && data.data.length) {
+            citySelect.innerHTML = '<option value="">--Select City--</option>';
+            data.data.forEach(city => {
+              const option = document.createElement("option");
+              option.value = city;
+              option.textContent = city;
+              citySelect.appendChild(option);
+            });
+            citySelect.disabled = false;
+          } else {
+            citySelect.innerHTML = '<option value="">No cities found</option>';
+            citySelect.disabled = true;
+          }
+        })
+        .catch(() => {
+          citySelect.innerHTML = '<option value="">Error loading cities</option>';
+          citySelect.disabled = true;
         });
-      });
     });
 
-    // Handle form submission
-    document.getElementById("locationForm").addEventListener("submit", e => {
+    // Handle form submit
+    document.getElementById("locationForm").addEventListener("submit", async (e) => {
       e.preventDefault();
       const country = countrySelect.value;
       const state = stateSelect.value;
       const city = citySelect.value;
 
-      alert(`Submitted:\nCountry: ${country}\nState: ${state}\nCity: ${city}`);
-      // You can send this to Google Sheets, Sheety, or backend here
+      // Replace this with your Apps Script Web App URL
+      const scriptURL = "https://script.google.com/macros/s/AKfycbw1Mm6sEtUhdjF8-lGLb9BpMMf-1zY9igGxofoIMLQHmY2wyeTx5VI1bbiOwdaisRDt/exec";
+
+      try {
+        const response = await fetch(scriptURL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ country, state, city })
+        });
+        const result = await response.json();
+
+        if (result.result === "success") {
+          alert("Form submitted successfully!");
+          e.target.reset();
+          stateSelect.innerHTML = '<option value="">--Select State--</option>';
+          stateSelect.disabled = true;
+          citySelect.innerHTML = '<option value="">--Select City--</option>';
+          citySelect.disabled = true;
+        } else {
+          alert("Submission error: " + result.message);
+        }
+      } catch (error) {
+        alert("Error submitting form: " + error.message);
+      }
     });
   </script>
 
